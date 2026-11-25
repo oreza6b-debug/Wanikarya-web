@@ -1,18 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ShoppingBag,
   MapPin,
   Star,
   ShieldCheck,
   Truck,
   Heart,
   Share2,
-  ArrowRight,
-  Sparkles,
 } from "lucide-react";
 import ImageBox from "@/components/ImageBox";
 import ProductCard from "@/components/ProductCard";
+import ProductPurchaseSection from "@/components/ProductPurchaseSection";
 import { getProduct, getAllProducts, getStore, getVillage, finalPrice, getProductsByStore } from "@/lib/queries";
 import { rupiah } from "@/lib/format";
 
@@ -47,7 +45,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     .slice(0, 3);
 
   return (
-    <>
+    <div className="pb-28 sm:pb-24">
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="border-b border-cream bg-paper text-xs text-ink/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
@@ -171,31 +169,16 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               </div>
             </div>
 
-            {/* Tombol Pesan */}
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              {soldOut ? (
-                <button
-                  disabled
-                  className="w-full rounded-xl bg-cream py-3.5 text-center text-sm font-semibold text-ink/50"
-                >
-                  Habis Terjual (Sedang Diproduksi Ulang)
-                </button>
-              ) : (
-                <>
-                  <Link
-                    href={`/her-story/${store.slug}#pesan`}
-                    className="flex-1 rounded-xl bg-terracotta py-3.5 text-center text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-dark"
-                  >
-                    Pesan Sekarang Langsung via Pengrajin
-                  </Link>
-                  <Link
-                    href="/her-market"
-                    className="rounded-xl bg-cream px-5 py-3.5 text-sm font-medium text-ink/80 hover:bg-sand/40"
-                  >
-                    Katalog Lainnya
-                  </Link>
-                </>
-              )}
+            {/* Bagian Pembelian: Tombol + Keranjang, Beli Langsung, dan Sticky Bottom Bar */}
+            <ProductPurchaseSection product={p} storeName={store.businessName} />
+
+            <div className="mt-4 flex items-center justify-between text-xs text-ink/60">
+              <Link href="/her-market" className="hover:text-terracotta underline">
+                ← Kembali ke Katalog HerMarket
+              </Link>
+              <Link href={`/her-story/${store.slug}#pesan`} className="hover:text-terracotta">
+                Tanya Pengrajin Khusus / Kustom →
+              </Link>
             </div>
 
             {/* Profil Pembuat */}
@@ -261,6 +244,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           </div>
         </section>
       )}
-    </>
+    </div>
   );
 }
