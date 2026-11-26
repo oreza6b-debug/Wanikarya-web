@@ -1,7 +1,8 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, ShoppingCart } from "lucide-react";
+import { User, ShoppingCart, LogIn, UserPlus, Store, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { getSession } from "@/lib/session";
 
@@ -19,6 +20,30 @@ export default function Navbar() {
   const pathname = usePathname();
   const { totalItems, setIsCartOpen } = useCart();
   const session = getSession(); // MOCK: ganti dengan sesi Supabase saat BE siap
+  const [profileOpen, setProfileOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    if (profileOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileOpen]);
+
+  if (
+    pathname.startsWith("/usaha") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/daftar")
+  ) {
+    return null;
+  }
 
   return (
     <header className="border-b border-cream bg-paper">
@@ -68,18 +93,68 @@ export default function Navbar() {
               </Link>
               {session.role === "womanpreneur" && (
                 <Link
-                  href="/usaha/pesanan"
+                  href="/usaha/dashboard"
                   className="rounded-lg bg-sage/20 px-4 py-2 font-medium text-forest hover:bg-sage/30"
                 >
                   Mode Usaha
                 </Link>
               )}
-              <span
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-white"
-                title={session.name}
-              >
-                <User size={16} aria-hidden />
-              </span>
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((v) => !v)}
+                  aria-label="Menu Akun & Login"
+                  aria-expanded={profileOpen}
+                  title={session.name}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-white transition hover:bg-terracotta-dark"
+                >
+                  <User size={16} aria-hidden />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 z-50 mt-2 w-60 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-sand/30">
+                    <div className="border-b border-cream px-3 py-2.5">
+                      <p className="text-xs font-bold text-ink">{session.name}</p>
+                      <p className="text-[11px] text-ink/55">
+                        {session.role === "womanpreneur" ? "Womanpreneur • Pawon Salak Lestari" : "Pembeli Terdaftar"}
+                      </p>
+                    </div>
+                    <div className="py-1.5 space-y-0.5 text-xs">
+                      <Link
+                        href="/pesanan"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink/80 transition hover:bg-cream hover:text-terracotta"
+                      >
+                        <ShoppingBag size={14} />
+                        Pembelian Saya
+                      </Link>
+                      {session.role === "womanpreneur" && (
+                        <Link
+                          href="/usaha/dashboard"
+                          className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink/80 transition hover:bg-cream hover:text-terracotta"
+                        >
+                          <Store size={14} />
+                          Mode Usaha
+                        </Link>
+                      )}
+                      <div className="my-1 border-t border-cream" />
+                      <Link
+                        href="/login"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 font-semibold text-terracotta transition hover:bg-cream"
+                      >
+                        <LogIn size={14} />
+                        Masuk / Ganti Akun
+                      </Link>
+                      <Link
+                        href="/daftar"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink/80 transition hover:bg-cream hover:text-terracotta"
+                      >
+                        <UserPlus size={14} />
+                        Daftar Akun Baru
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <Link

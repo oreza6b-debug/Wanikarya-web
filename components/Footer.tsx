@@ -1,4 +1,6 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const groups = [
   {
@@ -31,6 +33,15 @@ const groups = [
 ];
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (
+    pathname.startsWith("/usaha") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/daftar")
+  ) {
+    return null;
+  }
+
   return (
     <footer className="bg-paper">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
