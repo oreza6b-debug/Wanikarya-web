@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  logging: {
+    serverFunctions: false,
+  },
+};
 
 export default nextConfig;
