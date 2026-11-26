@@ -19,7 +19,7 @@ import {
 import RoleGuard from "@/components/RoleGuard";
 import { useOrders } from "@/components/OrdersProvider";
 import { useSession } from "@/components/AuthProvider";
-import { fmtDate, total, type Order, type OrderStatus } from "@/lib/orders";
+import { RESPONSE_MS, addMs, cancelText, fmtDate, sisaWaktu, total, type Order, type OrderStatus } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
 import ImageBox from "@/components/ImageBox";
 
@@ -36,7 +36,7 @@ const TAB_CONFIG: { id: TabFilter; label: string; countStatus?: OrderStatus }[] 
 ];
 
 function Content() {
-  const { orders, batalkan, konfirmasiDiterima } = useOrders();
+  const { orders, loaded, batalkan, konfirmasiDiterima } = useOrders();
   const { session } = useSession();
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabFilter>("");
@@ -60,6 +60,10 @@ function Content() {
     .filter((o) => (activeTab ? o.status === activeTab : true))
     .filter((o) => (q.trim() ? o.kode.toLowerCase().includes(q.trim().toLowerCase()) || o.items.some((i) => i.name.toLowerCase().includes(q.trim().toLowerCase())) : true))
     .sort((a, b) => (sortBy === "terbaru" ? b.createdAt.localeCompare(a.createdAt) : a.createdAt.localeCompare(b.createdAt)));
+
+  if (!loaded) {
+    return <div className="bg-paper min-h-screen px-4 py-16 text-center text-sm text-ink/60">Memuat pesanan…</div>;
+  }
 
   return (
     <div className="bg-paper min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -308,7 +312,7 @@ function OrderCard({
       <div className="grid gap-4 py-4 sm:grid-cols-[auto_1fr_auto] sm:items-center">
         {/* Product Thumbnail */}
         <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl bg-cream">
-          <ImageBox src={fallbackImage} alt={firstItem?.name || "Produk"} className="h-full w-full object-cover" />
+          <ImageBox src={firstItem?.image || fallbackImage} alt={firstItem?.name || "Produk"} className="h-full w-full object-cover" />
         </div>
 
         {/* Product Details & Status Information */}
@@ -326,7 +330,7 @@ function OrderCard({
           {/* Contextual status callout inside body */}
           {o.status === "dibayarkan" && (
             <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">
-              <Clock size={12} /> Sisa waktu respon penjual: 41 jam
+              <Clock size={12} /> Sisa waktu respon penjual: {sisaWaktu(addMs(o.createdAt, RESPONSE_MS))}
             </div>
           )}
 
@@ -335,10 +339,6 @@ function OrderCard({
               <p className="flex items-center gap-1.5 text-xs text-ink/75">
                 <CheckCircle2 size={13} className="text-sage shrink-0" />
                 Ibu pengrajin sedang menyiapkan kardus ramah lingkungan & pelindung alami.
-              </p>
-              <p className="flex items-center gap-1 text-[11px] text-terracotta">
-                <Clock size={11} className="shrink-0" />
-                Estimasi serah terima ke kurir: Hari ini sebelum 17.00 WIB
               </p>
             </div>
           )}
@@ -349,11 +349,8 @@ function OrderCard({
                 <span className="rounded bg-sky-100 px-2 py-0.5 font-bold text-sky-800 text-[10px]">
                   {o.ekspedisi || "J&T Express"}
                 </span>
-                <span className="font-mono text-ink/70">Resi: {o.resi || "JT9928172019"}</span>
+                <span className="font-mono text-ink/70">Resi: {o.resi}</span>
               </div>
-              <p className="text-[11px] text-ink/65">
-                Posisi Terakhir: Gateway Sleman Menuju Hub Pengantaran Akhir
-              </p>
             </div>
           )}
 
@@ -365,10 +362,8 @@ function OrderCard({
 
           {o.status === "dibatalkan" && (
             <div className="mt-2 rounded-xl bg-red-50 p-2.5 text-xs text-red-800 ring-1 ring-red-200">
-              <p className="font-semibold text-[11px] uppercase tracking-wide">Alasan Penolakan:</p>
-              <p className="mt-0.5 text-red-700 italic">
-                &ldquo;{o.cancelReason || "Stok bahan baku habis, produksi ulang belum selesai."}&rdquo;
-              </p>
+              <p className="font-semibold text-[11px] uppercase tracking-wide">Keterangan Pembatalan:</p>
+              <p className="mt-0.5 text-red-700 italic">{cancelText(o)}</p>
             </div>
           )}
         </div>
@@ -392,11 +387,11 @@ function OrderCard({
       {/* Card Footer Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-cream/70 pt-3 mt-1 text-xs">
         <p className="text-ink/65 text-[11px]">
-          {o.status === "dibayarkan" && "Dana tertahan aman dalam Rekening Bersama WaniKarya"}
-          {o.status === "dikemas" && "Ibu Wahyuni sedang menyiapkan kardus ramah lingkungan & pelindung daun pisang"}
+          {o.status === "dibayarkan" && "Pembayaran simulasi (Mode Demo) berhasil. Menunggu penjual menerima pesanan."}
+          {o.status === "dikemas" && `${o.storeName} sedang menyiapkan pesanan Anda`}
           {o.status === "dikirim" && "Pastikan paket dibuka dan diperiksa sebelum menyelesaikan pesanan"}
           {o.status === "selesai" && "Pembelian Anda berkontribusi pada kemandirian perempuan Dusun Gabugan"}
-          {o.status === "dibatalkan" && "Dana telah dikembalikan ke saldo dompet WaniKarya Buyer Anda"}
+          {o.status === "dibatalkan" && "Pembayaran simulasi ditandai dikembalikan."}
         </p>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">

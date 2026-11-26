@@ -3,7 +3,7 @@
 export type OrderStatus = "dibayarkan" | "dikemas" | "dikirim" | "selesai" | "dibatalkan";
 export type Actor = "Buyer" | "Womanpreneur" | "Sistem";
 
-export type OrderItem = { name: string; price: number; normalPrice?: number; qty: number }; // price = harga satuan SETELAH promo; normalPrice diisi bila ada promo (disalin saat order dibuat)
+export type OrderItem = { name: string; price: number; normalPrice?: number; qty: number; image?: string }; // price = harga satuan SETELAH promo; normalPrice diisi bila ada promo (disalin saat order dibuat)
 export type HistoryEntry = { status: OrderStatus; at: string; by: Actor };
 export type Order = {
   kode: string; // WK-TTTTBBHH-nnnnn
@@ -22,6 +22,9 @@ export type Order = {
   resi?: string;
   cancelReason?: string;
   cancelledBy?: Actor;
+  buyerNote?: string;
+  paymentMethod?: "qris" | "va" | "cod";
+  paymentStatus?: "paid_demo" | "refunded_demo";
 };
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -37,6 +40,11 @@ export const STATUS_STYLE: Record<OrderStatus, string> = {
   dikirim: "bg-sky-100 text-sky-800",
   selesai: "bg-emerald-100 text-emerald-800",
   dibatalkan: "bg-red-100 text-red-700",
+};
+export const PAYMENT_LABEL: Record<"qris" | "va" | "cod", string> = {
+  qris: "QRIS (Simulasi)",
+  va: "Virtual Account (Simulasi)",
+  cod: "Bayar di Tempat / COD (Simulasi)",
 };
 export const EKSPEDISI = ["JNE", "J&T", "SiCepat", "POS Indonesia", "Kurir Desa"]; // daftar tetap (Lampiran C no.5)
 export const RESPONSE_MS = 2 * 24 * 3600 * 1000; // SKN-08
@@ -106,6 +114,13 @@ export const mockOrders: Order[] = [
 ];
 
 // ---- Helper tampilan ----
+export function sisaWaktu(deadlineIso: string) {
+  const ms = new Date(deadlineIso).getTime() - Date.now();
+  if (ms <= 0) return "batas waktu terlewati";
+  const jam = Math.floor(ms / 3600000);
+  const menit = Math.floor((ms % 3600000) / 60000);
+  return `${jam} jam ${menit} menit`;
+}
 const dtf = new Intl.DateTimeFormat("id-ID", {
   day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta",
 });

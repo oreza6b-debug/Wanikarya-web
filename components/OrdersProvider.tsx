@@ -1,19 +1,21 @@
 "use client";
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { mockOrders, type Actor, type Order, type OrderStatus } from "@/lib/orders";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useSession } from "@/components/AuthProvider";
+import { fetchOrders } from "@/lib/orders-db";
+import type { Order } from "@/lib/orders";
 
-// STATE SEMENTARA (mock, hilang saat refresh). Saat BE siap, ganti isi fungsi di bawah
-// dengan pemanggilan Supabase. Aturan sebenarnya (validasi stok, siapa boleh mengubah status,
-// batas 2x24 jam / 7x24 jam, pencatatan pendapatan) ditegakkan di BE.
+// TAHAP 5a: pesanan dibaca dari Supabase (data asli). Pembuatan pesanan ada di CheckoutModal.
+// Aksi status (terima/tolak/kirim/batalkan/konfirmasi) belum tersambung: Tahap 5b.
 type Ctx = {
   orders: Order[];
+  loaded: boolean;
+  refresh: () => Promise<void>;
   getOrder: (kode: string) => Order | undefined;
-  addOrder: (order: Order) => void;
-  terima: (kode: string) => void; // Dibayarkan -> Dikemas (penjual)
-  tolak: (kode: string, reason: string) => void; // Dibayarkan -> Dibatalkan (penjual, alasan wajib)
-  kirim: (kode: string, ekspedisi: string, resi: string) => void; // Dikemas -> Dikirim (penjual)
-  batalkan: (kode: string) => void; // Dibayarkan -> Dibatalkan (buyer)
-  konfirmasiDiterima: (kode: string) => void; // Dikirim -> Pesanan Selesai (buyer)
+  terima: (kode: string) => void;
+  tolak: (kode: string, reason: string) => void;
+  kirim: (kode: string, ekspedisi: string, resi: string) => void;
+  batalkan: (kode: string) => void;
+  konfirmasiDiterima: (kode: string) => void;
 };
 
 const OrdersCtx = createContext<Ctx | null>(null);
@@ -24,35 +26,54 @@ export function useOrders() {
   return c;
 }
 
+const belumAktif = () =>
+  window.alert("Aksi ini baru tersambung ke database di Tahap 5b. Untuk sekarang belum berfungsi.");
+
 export default function OrdersProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const { session } = useSession();
+  const userId = session?.userId;
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  // Hanya berubah bila status saat ini == from (mencegah klik ganda / lompat status).
-  const move = useCallback(
-    (kode: string, from: OrderStatus, to: OrderStatus, by: Actor, patch: Partial<Order> = {}) =>
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.kode === kode && o.status === from
-            ? { ...o, ...patch, status: to, history: [...o.history, { status: to, at: new Date().toISOString(), by }] }
-            : o
-        )
-      ),
-    []
-  );
+  const refresh = useCallback(async () => {
+    if (!userId) {
+      setOrders([]);
+      setLoaded(true);
+      return;
+    }
+    try {
+      setOrders(await fetchOrders());
+    } catch (e) {
+      console.error("Gagal memuat pesanan:", e);
+    } finally {
+      setLoaded(true);
+    }
+  }, [userId]);
 
-  const addOrder = useCallback((order: Order) => {
-    setOrders((prev) => [order, ...prev]);
-  }, []);
+  useEffect(() => {
+    setLoaded(false);
+    void refresh();
+  }, [refresh]);
+
+  // Muat ulang saat tab kembali dibuka (mis. penjual mengecek pesanan baru).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refresh]);
 
   const value: Ctx = {
     orders,
+    loaded,
+    refresh,
     getOrder: (kode) => orders.find((o) => o.kode === kode),
-    addOrder,
-    terima: (k) => move(k, "dibayarkan", "dikemas", "Womanpreneur"),
-    tolak: (k, reason) => move(k, "dibayarkan", "dibatalkan", "Womanpreneur", { cancelReason: reason, cancelledBy: "Womanpreneur" }),
-    kirim: (k, ekspedisi, resi) => move(k, "dikemas", "dikirim", "Womanpreneur", { ekspedisi, resi }),
-    batalkan: (k) => move(k, "dibayarkan", "dibatalkan", "Buyer", { cancelledBy: "Buyer" }),
-    konfirmasiDiterima: (k) => move(k, "dikirim", "selesai", "Buyer"),
+    terima: belumAktif,
+    tolak: belumAktif,
+    kirim: belumAktif,
+    batalkan: belumAktif,
+    konfirmasiDiterima: belumAktif,
   };
 
   return <OrdersCtx.Provider value={value}>{children}</OrdersCtx.Provider>;
