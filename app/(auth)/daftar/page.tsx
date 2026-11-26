@@ -16,12 +16,17 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
+import { registerAction } from "@/app/actions/auth";
+import { useSession } from "@/components/AuthProvider";
 
 export default function DaftarPage() {
   const router = useRouter();
+  const { refreshSession } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [agree, setAgree] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
     nama: "",
@@ -35,18 +40,37 @@ export default function DaftarPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg("");
+
     if (!agree) {
-      alert("Harap setujui Syarat & Ketentuan terlebih dahulu.");
+      setErrorMsg("Harap setujui Syarat & Ketentuan terlebih dahulu.");
       return;
     }
     if (form.password !== form.konfirmasi) {
-      alert("Kata sandi dan konfirmasi tidak cocok.");
+      setErrorMsg("Kata sandi dan konfirmasi tidak cocok.");
       return;
     }
-    // TODO: integrasi Supabase auth
-    alert("Pendaftaran belum tersambung ke backend.");
+
+    setPending(true);
+    try {
+      const res = await registerAction({ ...form, agree });
+      if (!res.ok) {
+        setErrorMsg(res.error ?? "Pendaftaran gagal.");
+        return;
+      }
+      if (res.error) {
+        setErrorMsg(res.error);
+        return;
+      }
+
+      await refreshSession();
+      router.push("/");
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -245,12 +269,20 @@ export default function DaftarPage() {
             </span>
           </label>
 
+          {/* Error */}
+          {errorMsg && (
+            <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-700 ring-1 ring-red-200">
+              {errorMsg}
+            </div>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
-            className="w-full rounded-xl bg-terracotta py-3 text-sm font-semibold text-white transition hover:bg-terracotta-dark"
+            disabled={pending}
+            className="w-full rounded-xl bg-terracotta py-3 text-sm font-semibold text-white transition hover:bg-terracotta-dark disabled:opacity-60"
           >
-            Daftar Akun Baru →
+            {pending ? "Mendaftarkan..." : "Daftar Akun Baru →"}
           </button>
         </form>
 

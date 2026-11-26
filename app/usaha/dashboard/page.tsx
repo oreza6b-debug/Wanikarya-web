@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { RESPONSE_MS, addMs, fmtDate, subtotal } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
 import { products, services } from "@/lib/data";
@@ -24,7 +24,7 @@ import {
 
 export default function DashboardUsahaPage() {
   const { orders } = useOrders();
-  const session = getSession();
+  const { session } = useSession();
 
   const mine = orders.filter((o) => o.storeSlug === session?.storeSlug);
   const myProducts = products.filter((p) => p.storeSlug === session?.storeSlug);

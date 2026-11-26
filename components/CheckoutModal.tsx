@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCart, CartItem } from "@/context/CartContext";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { rupiah } from "@/lib/format";
 import type { Order } from "@/lib/orders";
 import ImageBox from "./ImageBox";
@@ -20,6 +20,7 @@ export default function CheckoutModal() {
     clearCart,
   } = useCart();
   const { addOrder } = useOrders();
+  const { session } = useSession();
 
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "va" | "cod">("qris");
   const [step, setStep] = useState<"summary" | "pay_instruction">("summary");
@@ -38,7 +39,6 @@ export default function CheckoutModal() {
     const code = `WK-${today}-${randomNum}`;
     setOrderCode(code);
 
-    const session = getSession();
     const newOrder: Order = {
       kode: code,
       storeSlug: "bu-sumarsih",

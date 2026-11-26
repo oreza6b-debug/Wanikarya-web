@@ -2,16 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bell, ArrowLeftRight, Store, LogIn, UserPlus } from "lucide-react";
-import { getSession } from "@/lib/session";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, ArrowLeftRight, Store, LogIn, LogOut, UserPlus } from "lucide-react";
+import { useSession } from "@/components/AuthProvider";
+import { logoutAction } from "@/app/actions/auth";
 
 // Top-bar mode usaha sesuai mockup WPA-01 s.d. WPA-05
 export default function SellerTopBar() {
-  const s = getSession();
+  const { session: s, refreshSession } = useSession();
+  const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const storeLabel = s?.storeName ?? "Toko Womanpreneur";
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    await logoutAction();
+    await refreshSession();
+    router.push("/login");
+    router.refresh();
+  }
 
   useEffect(() => {
     setMenuOpen(false);
@@ -45,7 +57,7 @@ export default function SellerTopBar() {
         <div className="flex flex-1 items-center gap-3">
           <span className="flex items-center gap-1.5 rounded-full bg-sage/20 px-3 py-1.5 text-xs font-bold text-forest">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Mode Usaha (Pawon Salak Lestari)
+            Mode Usaha ({storeLabel})
           </span>
           <Link
             href="/pesanan"
@@ -65,8 +77,8 @@ export default function SellerTopBar() {
             <Bell size={18} className="text-ink/60" />
           </button>
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-ink leading-tight">{s?.name ?? "Bu Sumarsih"}</p>
-            <p className="text-[11px] text-ink/50 leading-tight">Pawon Salak Lestari</p>
+            <p className="text-sm font-semibold text-ink leading-tight">{s?.name ?? "Penjual"}</p>
+            <p className="text-[11px] text-ink/50 leading-tight">{storeLabel}</p>
           </div>
           <div className="relative" ref={menuRef}>
             <button
@@ -76,14 +88,14 @@ export default function SellerTopBar() {
               aria-expanded={menuOpen}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-white transition hover:bg-terracotta-dark"
             >
-              {s?.name?.charAt(0) ?? "S"}
+              {s?.name?.charAt(0) ?? "W"}
             </button>
 
             {menuOpen && (
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-sand/30">
                 <div className="border-b border-cream px-3 py-2">
-                  <p className="text-xs font-bold text-ink">{s?.name ?? "Bu Sumarsih"}</p>
-                  <p className="text-[11px] text-ink/55">Pawon Salak Lestari</p>
+                  <p className="text-xs font-bold text-ink">{s?.name ?? "Penjual"}</p>
+                  <p className="text-[11px] text-ink/55">{storeLabel}</p>
                 </div>
                 <div className="py-1.5 space-y-0.5 text-xs">
                   <Link
@@ -108,6 +120,14 @@ export default function SellerTopBar() {
                     <UserPlus size={14} />
                     Daftar Akun Baru
                   </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-red-700 transition hover:bg-red-50"
+                  >
+                    <LogOut size={14} />
+                    Keluar
+                  </button>
                 </div>
               </div>
             )}

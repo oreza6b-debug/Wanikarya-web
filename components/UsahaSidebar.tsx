@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useOrders } from "./OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -37,7 +37,8 @@ const navLinks = [
 export default function UsahaSidebar() {
   const pathname = usePathname();
   const { orders } = useOrders();
-  const s = getSession();
+  const { session: s } = useSession();
+  const storeLabel = s?.storeName ?? "Toko Saya";
   const perluDiproses = orders.filter(
     (o) => o.storeSlug === s?.storeSlug && o.status === "dibayarkan"
   ).length;
@@ -46,15 +47,15 @@ export default function UsahaSidebar() {
     <aside className="h-fit rounded-2xl bg-cream/60 p-4">
       {/* Header Sidebar */}
       <div className="mb-3 rounded-xl bg-terracotta/10 px-3 py-2 text-center">
-        <p className="text-xs font-bold text-terracotta">⊙ Mode Usaha (Pawon Salak Lestari)</p>
+        <p className="text-xs font-bold text-terracotta">⊙ Mode Usaha ({storeLabel})</p>
       </div>
       <div className="mb-1 flex items-center gap-2 px-1">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-terracotta text-white text-sm font-bold">
-          {s?.name?.charAt(0) ?? "S"}
+          {s?.name?.charAt(0) ?? "W"}
         </div>
         <div>
           <p className="text-sm font-semibold text-ink leading-tight">{s?.name}</p>
-          <p className="text-[11px] text-ink/55">Pawon Salak Lestari</p>
+          <p className="text-[11px] text-ink/55">{storeLabel}</p>
         </div>
       </div>
 

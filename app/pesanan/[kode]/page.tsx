@@ -24,7 +24,7 @@ import {
 import RoleGuard from "@/components/RoleGuard";
 import OrderTracker from "@/components/OrderTracker";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import {
   RESPONSE_MS,
   AUTO_DONE_MS,
@@ -42,7 +42,7 @@ const WA_CONTACT = "6281234567890";
 
 function Content({ kode }: { kode: string }) {
   const { orders, batalkan, konfirmasiDiterima, terima, tolak, kirim } = useOrders();
-  const session = getSession();
+  const { session } = useSession();
   const o = orders.find((ord) => ord.kode === kode);
 
   const [copied, setCopied] = useState(false);

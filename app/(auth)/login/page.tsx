@@ -2,19 +2,58 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, User, CheckCircle2 } from "lucide-react";
 import ImageBox from "@/components/ImageBox";
+import { loginAction } from "@/app/actions/auth";
+import { useSession } from "@/components/AuthProvider";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { refreshSession } = useSession();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: integrasi Supabase auth
-    alert("Login belum tersambung ke backend.");
+    setErrorMsg("");
+    setPending(true);
+    try {
+      const res = await loginAction({ identifier, password });
+      if (!res.ok) {
+        setErrorMsg(res.error ?? "Gagal masuk ke akun.");
+        return;
+      }
+
+      await refreshSession();
+
+      const nextParam =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next")
+          : null;
+      const safeNext =
+        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+          ? nextParam
+          : null;
+
+      let target = res.role === "womanpreneur" ? "/usaha/dashboard" : "/";
+      if (safeNext) {
+        if (safeNext.startsWith("/usaha") && res.role !== "womanpreneur") {
+          target = "/pesanan";
+        } else {
+          target = safeNext;
+        }
+      }
+
+      router.push(target);
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -124,12 +163,20 @@ export default function LoginPage() {
               </span>
             </label>
 
+            {/* Error */}
+            {errorMsg && (
+              <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-700 ring-1 ring-red-200">
+                {errorMsg}
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-terracotta py-3 text-sm font-semibold text-white transition hover:bg-terracotta-dark"
+              disabled={pending}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-terracotta py-3 text-sm font-semibold text-white transition hover:bg-terracotta-dark disabled:opacity-60"
             >
-              Masuk ke Akun WaniKarya →
+              {pending ? "Memproses..." : "Masuk ke Akun WaniKarya →"}
             </button>
           </form>
 

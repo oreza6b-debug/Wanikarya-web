@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import RoleGuard from "@/components/RoleGuard";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { fmtDate, total, type Order, type OrderStatus } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
 import ImageBox from "@/components/ImageBox";
@@ -37,7 +37,7 @@ const TAB_CONFIG: { id: TabFilter; label: string; countStatus?: OrderStatus }[] 
 
 function Content() {
   const { orders, batalkan, konfirmasiDiterima } = useOrders();
-  const session = getSession();
+  const { session } = useSession();
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabFilter>("");
   const [sortBy, setSortBy] = useState<"terbaru" | "terlama">("terbaru");

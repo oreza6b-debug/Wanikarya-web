@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { products as allProducts, categories } from "@/lib/data";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { rupiah } from "@/lib/format";
 import ImageBox from "@/components/ImageBox";
 import {
@@ -31,7 +31,7 @@ function getProductImage(p: Product) {
 }
 
 export default function ProdukPage() {
-  const session = getSession();
+  const { session } = useSession();
   const myProducts = allProducts.filter((p) => p.storeSlug === session?.storeSlug);
 
   const [q, setQ] = useState("");

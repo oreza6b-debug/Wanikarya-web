@@ -30,9 +30,24 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Perpanjang session cookie secara otomatis; redirect ke /login belum diaktifkan
-  // sampai halaman login dari frontend tersedia.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  const isProtected =
+    pathname.startsWith("/pesanan") || pathname.startsWith("/usaha");
+
+  if (!user && isProtected) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("next", pathname + request.nextUrl.search);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+    return redirectResponse;
+  }
 
   return supabaseResponse;
 }

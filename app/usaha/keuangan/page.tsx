@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { categories, products } from "@/lib/data";
 import { doneAt, fmtDate, itemsSummary, monthKey, monthLabel, subtotal, type Order } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
@@ -19,7 +19,7 @@ const categoryOf = (name: string) => {
 
 export default function KeuanganPage() {
   const { orders } = useOrders();
-  const session = getSession();
+  const { session } = useSession();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [q, setQ] = useState("");
 
