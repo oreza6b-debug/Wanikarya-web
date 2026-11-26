@@ -1,12 +1,31 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, ArrowLeftRight, Store } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, ArrowLeftRight, Store, LogIn, UserPlus } from "lucide-react";
 import { getSession } from "@/lib/session";
 
 // Top-bar mode usaha sesuai mockup WPA-01 s.d. WPA-05
 export default function SellerTopBar() {
   const s = getSession();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
 
   return (
     <div className="sticky top-0 z-30 border-b border-cream bg-white/95 backdrop-blur-sm">
@@ -49,8 +68,49 @@ export default function SellerTopBar() {
             <p className="text-sm font-semibold text-ink leading-tight">{s?.name ?? "Bu Sumarsih"}</p>
             <p className="text-[11px] text-ink/50 leading-tight">Pawon Salak Lestari</p>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-white text-sm font-bold">
-            {s?.name?.charAt(0) ?? "S"}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu Profil & Login"
+              aria-expanded={menuOpen}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta text-sm font-bold text-white transition hover:bg-terracotta-dark"
+            >
+              {s?.name?.charAt(0) ?? "S"}
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-sand/30">
+                <div className="border-b border-cream px-3 py-2">
+                  <p className="text-xs font-bold text-ink">{s?.name ?? "Bu Sumarsih"}</p>
+                  <p className="text-[11px] text-ink/55">Pawon Salak Lestari</p>
+                </div>
+                <div className="py-1.5 space-y-0.5 text-xs">
+                  <Link
+                    href="/pesanan"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink/80 transition hover:bg-cream hover:text-terracotta"
+                  >
+                    <ArrowLeftRight size={14} />
+                    Beralih ke Mode Pembeli
+                  </Link>
+                  <div className="my-1 border-t border-cream" />
+                  <Link
+                    href="/login"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 font-semibold text-terracotta transition hover:bg-cream"
+                  >
+                    <LogIn size={14} />
+                    Masuk / Ganti Akun
+                  </Link>
+                  <Link
+                    href="/daftar"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-ink/80 transition hover:bg-cream hover:text-terracotta"
+                  >
+                    <UserPlus size={14} />
+                    Daftar Akun Baru
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
