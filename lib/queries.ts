@@ -22,8 +22,8 @@ const has = (hay: string, q: string) => hay.toLowerCase().includes(q.toLowerCase
 
 export type MarketParams = { q?: string; kategori?: string; desa?: string; harga?: string; urut?: string };
 
-export function getProducts(p: MarketParams = {}) {
-  const list = products.filter((x) => {
+export function getProducts(p: MarketParams = {}, source: Product[] = products) {
+  const list = source.filter((x) => {
     const store = getStore(x.storeSlug);
     if (p.q && !has(`${x.name} ${x.description} ${store.businessName}`, p.q)) return false;
     if (p.kategori && x.categorySlug !== p.kategori) return false;

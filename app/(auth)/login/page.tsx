@@ -36,7 +36,7 @@ export default function LoginPage() {
           ? new URLSearchParams(window.location.search).get("next")
           : null;
       const safeNext =
-        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") && !nextParam.includes("\\")
           ? nextParam
           : null;
 
