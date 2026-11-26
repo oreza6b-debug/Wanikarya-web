@@ -5,7 +5,7 @@ import { EKSPEDISI, type Order } from "@/lib/orders";
 
 export type Viewer = "buyer" | "seller" | "admin";
 
-const btn = "rounded-lg px-4 py-2 text-sm font-semibold transition-colors";
+const btn = "rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const primary = `${btn} bg-terracotta text-white hover:bg-terracotta-dark`;
 const danger = `${btn} bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100`;
 const field = "w-full rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-cream outline-none";
@@ -13,12 +13,13 @@ const field = "w-full rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-cream ou
 // Aksi hanya tampil untuk aktor berwenang pada status yang sesuai (FR-ORD-14).
 // Admin: baca saja, tidak ada aksi (SKN-16).
 export default function OrderActions({ order, viewer }: { order: Order; viewer: Viewer }) {
-  const { terima, tolak, kirim, batalkan, konfirmasiDiterima } = useOrders();
+  const { terima, tolak, kirim, batalkan, konfirmasiDiterima, busyKode } = useOrders();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [ekspedisi, setEkspedisi] = useState("");
   const [resi, setResi] = useState("");
   const [err, setErr] = useState("");
+  const isBusy = busyKode === order.kode;
 
   const s = order.status;
 
@@ -40,8 +41,8 @@ export default function OrderActions({ order, viewer }: { order: Order; viewer: 
       return <p className="text-xs text-ink/65">Pesanan sudah dikemas. Untuk pembatalan, hubungi penjual di luar sistem.</p>;
     if (s === "dikirim")
       return (
-        <button className={primary} onClick={() => konfirmasiDiterima(order.kode)}>
-          Pesanan Diterima
+        <button className={primary} disabled={isBusy} onClick={() => void konfirmasiDiterima(order.kode)}>
+          {isBusy ? "Memproses…" : "Pesanan Diterima"}
         </button>
       );
     return null;
@@ -54,8 +55,10 @@ export default function OrderActions({ order, viewer }: { order: Order; viewer: 
         <div className="space-y-3">
           {!rejecting ? (
             <div className="flex flex-wrap items-center justify-end gap-2.5">
-              <button className={danger} onClick={() => setRejecting(true)}>Tolak Pesanan</button>
-              <button className={primary} onClick={() => terima(order.kode)}>Terima Pesanan</button>
+              <button className={danger} disabled={isBusy} onClick={() => setRejecting(true)}>Tolak Pesanan</button>
+              <button className={primary} disabled={isBusy} onClick={() => void terima(order.kode)}>
+                {isBusy ? "Memproses…" : "Terima Pesanan"}
+              </button>
             </div>
           ) : (
             <div className="space-y-2">
@@ -104,11 +107,12 @@ export default function OrderActions({ order, viewer }: { order: Order; viewer: 
           <div className="flex justify-end">
             <button
               className={primary}
+              disabled={isBusy}
               onClick={() =>
-                ekspedisi && resi.trim() ? kirim(order.kode, ekspedisi, resi.trim()) : setErr("Ekspedisi dan nomor resi wajib diisi.")
+                ekspedisi && resi.trim() ? void kirim(order.kode, ekspedisi, resi.trim()) : setErr("Ekspedisi dan nomor resi wajib diisi.")
               }
             >
-              Kirim Pesanan
+              {isBusy ? "Memproses…" : "Kirim Pesanan"}
             </button>
           </div>
           {err && <p className="text-xs text-red-600 text-right">{err}</p>}

@@ -46,7 +46,7 @@ export const PAYMENT_LABEL: Record<"qris" | "va" | "cod", string> = {
   va: "Virtual Account (Simulasi)",
   cod: "Bayar di Tempat / COD (Simulasi)",
 };
-export const EKSPEDISI = ["JNE", "J&T", "SiCepat", "POS Indonesia", "Kurir Desa"]; // daftar tetap (Lampiran C no.5)
+export const EKSPEDISI = ["J&T Express", "Kurir BUMDes Gabugan"] as const; // daftar tetap sesuai rpc_ship_order
 export const RESPONSE_MS = 2 * 24 * 3600 * 1000; // SKN-08
 export const AUTO_DONE_MS = 7 * 24 * 3600 * 1000; // SKN-12
 

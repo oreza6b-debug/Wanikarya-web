@@ -45,9 +45,10 @@ import ImageBox from "@/components/ImageBox";
 const WA_CONTACT = "6281234567890";
 
 function Content({ kode }: { kode: string }) {
-  const { orders, loaded, batalkan, konfirmasiDiterima, terima, tolak, kirim } = useOrders();
+  const { orders, loaded, busyKode, batalkan, konfirmasiDiterima, terima, tolak, kirim } = useOrders();
   const { session } = useSession();
   const o = orders.find((ord) => ord.kode === kode);
+  const isBusy = busyKode === kode;
 
   const [copied, setCopied] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -285,10 +286,11 @@ function Content({ kode }: { kode: string }) {
                 {o.status === "dikirim" && (
                   <button
                     type="button"
-                    onClick={() => konfirmasiDiterima(o.kode)}
-                    className="flex items-center gap-1.5 rounded-xl bg-forest px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-forest/90"
+                    disabled={isBusy}
+                    onClick={() => void konfirmasiDiterima(o.kode)}
+                    className="flex items-center gap-1.5 rounded-xl bg-forest px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <CheckCircle2 size={15} /> Konfirmasi Pesanan Diterima
+                    <CheckCircle2 size={15} /> {isBusy ? "Memproses…" : "Konfirmasi Pesanan Diterima"}
                   </button>
                 )}
 
@@ -328,17 +330,19 @@ function Content({ kode }: { kode: string }) {
                   <>
                     <button
                       type="button"
+                      disabled={isBusy}
                       onClick={() => setRejecting(true)}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Tolak Pesanan
                     </button>
                     <button
                       type="button"
-                      onClick={() => terima(o.kode)}
-                      className="rounded-xl bg-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors"
+                      disabled={isBusy}
+                      onClick={() => void terima(o.kode)}
+                      className="rounded-xl bg-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Terima Pesanan (Mulai Mengemas)
+                      {isBusy ? "Memproses…" : "Terima Pesanan (Mulai Mengemas)"}
                     </button>
                   </>
                 )}
@@ -400,9 +404,6 @@ function Content({ kode }: { kode: string }) {
                 >
                   <option value="J&T Express">J&amp;T Express - Layanan Reguler Desa</option>
                   <option value="Kurir BUMDes Gabugan">Kurir BUMDes Gabugan (Antar Desa)</option>
-                  <option value="JNE">JNE Reguler</option>
-                  <option value="SiCepat">SiCepat Ekspres</option>
-                  <option value="POS Indonesia">POS Indonesia</option>
                 </select>
               </div>
 
@@ -439,6 +440,7 @@ function Content({ kode }: { kode: string }) {
               <div className="flex justify-end shrink-0">
                 <button
                   type="button"
+                  disabled={isBusy}
                   onClick={() => {
                     if (!inputResi.trim()) {
                       setResiError("Nomor resi wajib diisi.");
@@ -448,11 +450,11 @@ function Content({ kode }: { kode: string }) {
                       setResiError("Harap centang konfirmasi pengemasan terlebih dahulu.");
                       return;
                     }
-                    kirim(o.kode, selectedEkspedisi, inputResi.trim());
+                    void kirim(o.kode, selectedEkspedisi, inputResi.trim());
                   }}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-terracotta px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-terracotta px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Truck size={15} /> Konfirmasi &amp; Serahkan ke Kurir
+                  <Truck size={15} /> {isBusy ? "Memproses…" : "Konfirmasi & Serahkan ke Kurir"}
                 </button>
               </div>
             </div>

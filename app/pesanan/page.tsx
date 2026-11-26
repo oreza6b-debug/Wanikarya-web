@@ -36,7 +36,7 @@ const TAB_CONFIG: { id: TabFilter; label: string; countStatus?: OrderStatus }[] 
 ];
 
 function Content() {
-  const { orders, loaded, batalkan, konfirmasiDiterima } = useOrders();
+  const { orders, loaded, busyKode, batalkan, konfirmasiDiterima } = useOrders();
   const { session } = useSession();
   const [q, setQ] = useState("");
   const [activeTab, setActiveTab] = useState<TabFilter>("");
@@ -183,9 +183,10 @@ function Content() {
                 key={o.kode}
                 order={o}
                 copiedCode={copiedCode}
+                isBusy={busyKode === o.kode}
                 onCopy={handleCopy}
                 onCancel={(kode) => window.confirm("Batalkan pesanan ini?") && batalkan(kode)}
-                onConfirmReceived={(kode) => konfirmasiDiterima(kode)}
+                onConfirmReceived={(kode) => void konfirmasiDiterima(kode)}
               />
             ))}
           </div>
@@ -223,12 +224,14 @@ function Content() {
 function OrderCard({
   order: o,
   copiedCode,
+  isBusy,
   onCopy,
   onCancel,
   onConfirmReceived,
 }: {
   order: Order;
   copiedCode: string | null;
+  isBusy: boolean;
   onCopy: (text: string) => void;
   onCancel: (kode: string) => void;
   onConfirmReceived: (kode: string) => void;
@@ -432,10 +435,11 @@ function OrderCard({
               </Link>
               <button
                 type="button"
+                disabled={isBusy}
                 onClick={() => onConfirmReceived(o.kode)}
-                className="flex items-center gap-1.5 rounded-xl bg-forest px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-forest/90 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl bg-forest px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-forest/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Check size={14} /> Konfirmasi Pesanan Diterima
+                <Check size={14} /> {isBusy ? "Memproses…" : "Konfirmasi Pesanan Diterima"}
               </button>
             </>
           )}

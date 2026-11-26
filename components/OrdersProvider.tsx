@@ -1,21 +1,28 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  acceptOrderAction,
+  completeOrderAction,
+  shipOrderAction,
+  type OrderStatusActionResult,
+} from "@/app/actions/order-status";
 import { useSession } from "@/components/AuthProvider";
 import { fetchOrders } from "@/lib/orders-db";
 import type { Order } from "@/lib/orders";
 
-// TAHAP 5a: pesanan dibaca dari Supabase (data asli). Pembuatan pesanan ada di CheckoutModal.
-// Aksi status (terima/tolak/kirim/batalkan/konfirmasi) belum tersambung: Tahap 5b.
+// TAHAP 5b: terima, kirim, dan konfirmasiDiterima tersambung ke RPC Supabase via server action.
+// Aksi tolak dan batalkan masih stub (ditunda).
 type Ctx = {
   orders: Order[];
   loaded: boolean;
+  busyKode: string | null;
   refresh: () => Promise<void>;
   getOrder: (kode: string) => Order | undefined;
-  terima: (kode: string) => void;
+  terima: (kode: string) => Promise<OrderStatusActionResult>;
   tolak: (kode: string, reason: string) => void;
-  kirim: (kode: string, ekspedisi: string, resi: string) => void;
+  kirim: (kode: string, ekspedisi: string, resi: string) => Promise<OrderStatusActionResult>;
   batalkan: (kode: string) => void;
-  konfirmasiDiterima: (kode: string) => void;
+  konfirmasiDiterima: (kode: string) => Promise<OrderStatusActionResult>;
 };
 
 const OrdersCtx = createContext<Ctx | null>(null);
@@ -34,6 +41,8 @@ export default function OrdersProvider({ children }: { children: ReactNode }) {
   const userId = session?.userId;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [busyKode, setBusyKode] = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -64,16 +73,42 @@ export default function OrdersProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refresh]);
 
+  const runAction = useCallback(
+    async (kode: string, fn: () => Promise<OrderStatusActionResult>): Promise<OrderStatusActionResult> => {
+      if (busyRef.current) return { ok: false, error: "Sedang memproses pesanan lain." };
+      busyRef.current = true;
+      setBusyKode(kode);
+      try {
+        const res = await fn();
+        if (!res.ok) {
+          window.alert(res.error || "Terjadi kesalahan saat memproses pesanan.");
+          return res;
+        }
+        await refresh();
+        return res;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Terjadi kesalahan jaringan.";
+        window.alert(msg);
+        return { ok: false, error: msg };
+      } finally {
+        busyRef.current = false;
+        setBusyKode(null);
+      }
+    },
+    [busyKode, refresh]
+  );
+
   const value: Ctx = {
     orders,
     loaded,
+    busyKode,
     refresh,
     getOrder: (kode) => orders.find((o) => o.kode === kode),
-    terima: belumAktif,
+    terima: (kode) => runAction(kode, () => acceptOrderAction(kode)),
     tolak: belumAktif,
-    kirim: belumAktif,
+    kirim: (kode, ekspedisi, resi) => runAction(kode, () => shipOrderAction(kode, ekspedisi, resi)),
     batalkan: belumAktif,
-    konfirmasiDiterima: belumAktif,
+    konfirmasiDiterima: (kode) => runAction(kode, () => completeOrderAction(kode)),
   };
 
   return <OrdersCtx.Provider value={value}>{children}</OrdersCtx.Provider>;
