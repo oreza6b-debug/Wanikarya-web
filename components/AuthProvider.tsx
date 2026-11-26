@@ -86,7 +86,7 @@ export function AuthProvider({
     setLoading(true);
     try {
       const next = await fetchBrowserSession();
-      setSession(next);
+      setSession((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
       return next;
     } finally {
       setLoading(false);

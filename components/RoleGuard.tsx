@@ -21,6 +21,6 @@ export default function RoleGuard({
     }
   }, [loading, session, allow, router]);
 
-  if (loading || !ok) return null;
+  if (!ok) return null;
   return <>{children}</>;
 }
