@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Search, SearchX, Clock, Package, Truck, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import OrderActions from "@/components/OrderActions";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { RESPONSE_MS, addMs, fmtDate, subtotal, type OrderStatus } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
 import ImageBox from "@/components/ImageBox";
@@ -20,7 +20,7 @@ const TABS: { key: OrderStatus; label: string }[] = [
 
 export default function PesananMasukPage() {
   const { orders } = useOrders();
-  const session = getSession();
+  const { session } = useSession();
   const [tab, setTab] = useState<OrderStatus>("dibayarkan");
   const [q, setQ] = useState("");
 

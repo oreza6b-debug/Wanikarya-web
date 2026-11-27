@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { services as allServices, products as allProducts } from "@/lib/data";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import { rupiah } from "@/lib/format";
 import ImageBox from "@/components/ImageBox";
 import {
@@ -62,7 +62,7 @@ const mockPromos: Promo[] = [
 ];
 
 export default function JasaPromoPage() {
-  const session = getSession();
+  const { session } = useSession();
   const myServices = allServices.filter((s) => s.storeSlug === session?.storeSlug);
   const myProducts = allProducts.filter((p) => p.storeSlug === session?.storeSlug);
 

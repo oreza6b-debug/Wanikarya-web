@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { User, ShoppingCart, LogIn, UserPlus, Store, ShoppingBag } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { User, ShoppingCart, LogIn, LogOut, UserPlus, Store, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
+import { logoutAction } from "@/app/actions/auth";
 
 const links = [
   { href: "/", label: "Homepage" },
@@ -18,10 +19,19 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { totalItems, setIsCartOpen } = useCart();
-  const session = getSession(); // MOCK: ganti dengan sesi Supabase saat BE siap
+  const { session, refreshSession } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  async function handleLogout() {
+    setProfileOpen(false);
+    await logoutAction();
+    await refreshSession();
+    router.push("/login");
+    router.refresh();
+  }
 
   useEffect(() => {
     setProfileOpen(false);
@@ -116,7 +126,9 @@ export default function Navbar() {
                     <div className="border-b border-cream px-3 py-2.5">
                       <p className="text-xs font-bold text-ink">{session.name}</p>
                       <p className="text-[11px] text-ink/55">
-                        {session.role === "womanpreneur" ? "Womanpreneur • Pawon Salak Lestari" : "Pembeli Terdaftar"}
+                        {session.role === "womanpreneur"
+                          ? `Womanpreneur • ${session.storeName ?? "Toko Saya"}`
+                          : "Pembeli Terdaftar"}
                       </p>
                     </div>
                     <div className="py-1.5 space-y-0.5 text-xs">
@@ -151,6 +163,14 @@ export default function Navbar() {
                         <UserPlus size={14} />
                         Daftar Akun Baru
                       </Link>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-red-700 transition hover:bg-red-50"
+                      >
+                        <LogOut size={14} />
+                        Keluar
+                      </button>
                     </div>
                   </div>
                 )}

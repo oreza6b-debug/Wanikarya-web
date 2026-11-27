@@ -11,12 +11,13 @@ import {
 import ImageBox from "@/components/ImageBox";
 import ProductCard from "@/components/ProductCard";
 import ProductPurchaseSection from "@/components/ProductPurchaseSection";
-import { getProduct, getAllProducts, getStore, getVillage, finalPrice, getProductsByStore } from "@/lib/queries";
+import { getStore, getVillage, finalPrice } from "@/lib/queries";
+import { getDbProducts } from "@/lib/products-db";
 import { rupiah } from "@/lib/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const p = (await getDbProducts()).find((x) => x.slug === slug);
   if (!p) return { title: "Produk Tidak Ditemukan | WaniKarya" };
   return {
     title: `${p.name} | HerMarket – WaniKarya`,
@@ -24,13 +25,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export function generateStaticParams() {
-  return getAllProducts().map((p) => ({ slug: p.slug }));
-}
-
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const products = await getDbProducts();
+  const p = products.find((x) => x.slug === slug);
 
   if (!p) {
     notFound();
@@ -40,8 +38,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const village = getVillage(store.villageSlug);
   const price = finalPrice(p);
   const soldOut = p.stock === 0;
-  const sameStoreProducts = getProductsByStore(p.storeSlug)
-    .filter((other) => other.slug !== p.slug)
+  const sameStoreProducts = products
+    .filter((other) => other.storeSlug === p.storeSlug && other.slug !== p.slug)
     .slice(0, 3);
 
   return (

@@ -4,8 +4,9 @@ import { Search, Shirt, Utensils, Sprout, Home, Shapes, Hammer, ChevronDown, Sea
 import ImageBox from "@/components/ImageBox";
 import ProductCard from "@/components/ProductCard";
 import MarketFilter from "@/components/MarketFilter";
-import { categories, products, villages } from "@/lib/data";
+import { categories, villages } from "@/lib/data";
 import { getProducts } from "@/lib/queries";
+import { getDbProducts } from "@/lib/products-db";
 
 export const metadata = { title: "HerMarket | WaniKarya" };
 
@@ -23,7 +24,8 @@ type SP = { q?: string; kategori?: string; desa?: string; harga?: string; urut?:
 
 export default async function HerMarketPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const all = getProducts(sp);
+  const products = await getDbProducts();
+  const all = getProducts(sp, products);
   const limit = Math.max(PAGE_SIZE, Number(sp.limit) || PAGE_SIZE);
   const list = all.slice(0, limit);
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useSession } from "@/components/AuthProvider";
 import { rupiah } from "@/lib/format";
 import type { Product } from "@/lib/data";
 import ImageBox from "./ImageBox";
@@ -14,10 +16,13 @@ interface ProductPurchaseSectionProps {
 
 export default function ProductPurchaseSection({ product, storeName }: ProductPurchaseSectionProps) {
   const { addToCart, setCheckoutItem, setIsCheckoutOpen } = useCart();
+  const { session } = useSession();
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [addedAnimation, setAddedAnimation] = useState(false);
 
-  const soldOut = product.stock === 0;
+  const isOwnStore = !!session?.storeSlug && session.storeSlug === product.storeSlug; // SKN-13
+  const soldOut = product.stock === 0 || isOwnStore;
   const currentPrice = product.promoPercent
     ? Math.round((product.price * (100 - product.promoPercent)) / 100)
     : product.price;
@@ -35,6 +40,10 @@ export default function ProductPurchaseSection({ product, storeName }: ProductPu
 
   const handleAddToCart = () => {
     if (soldOut) return;
+    if (!session) {
+      router.push("/login");
+      return;
+    }
     addToCart(product, quantity, storeName);
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 1500);
@@ -42,6 +51,10 @@ export default function ProductPurchaseSection({ product, storeName }: ProductPu
 
   const handleBuyNow = () => {
     if (soldOut) return;
+    if (!session) {
+      router.push("/login");
+      return;
+    }
     setCheckoutItem({
       slug: product.slug,
       name: product.name,
@@ -100,7 +113,7 @@ export default function ProductPurchaseSection({ product, storeName }: ProductPu
             disabled
             className="w-full rounded-xl bg-cream py-3.5 text-center text-sm font-semibold text-ink/50 cursor-not-allowed"
           >
-            Habis Terjual (Sedang Diproduksi Ulang)
+            {isOwnStore ? "Ini Produk Toko Anda (tidak dapat dibeli)" : "Habis Terjual (Sedang Diproduksi Ulang)"}
           </button>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -188,7 +201,7 @@ export default function ProductPurchaseSection({ product, storeName }: ProductPu
               disabled
               className="rounded-xl bg-cream px-6 py-2.5 text-xs font-semibold text-ink/50"
             >
-              Stok Habis
+              {isOwnStore ? "Produk Toko Anda" : "Stok Habis"}
             </button>
           ) : (
             <div className="flex items-center gap-2.5 sm:gap-3">

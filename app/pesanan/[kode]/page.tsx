@@ -24,15 +24,19 @@ import {
 import RoleGuard from "@/components/RoleGuard";
 import OrderTracker from "@/components/OrderTracker";
 import { useOrders } from "@/components/OrdersProvider";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import {
   RESPONSE_MS,
   AUTO_DONE_MS,
+  PAYMENT_LABEL,
   addMs,
+  doneAt,
   fmtDate,
+  sisaWaktu,
   subtotal,
   total,
   type Order,
+  cancelText,
   type OrderStatus,
 } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
@@ -41,9 +45,10 @@ import ImageBox from "@/components/ImageBox";
 const WA_CONTACT = "6281234567890";
 
 function Content({ kode }: { kode: string }) {
-  const { orders, batalkan, konfirmasiDiterima, terima, tolak, kirim } = useOrders();
-  const session = getSession();
+  const { orders, loaded, busyKode, batalkan, konfirmasiDiterima, terima, tolak, kirim } = useOrders();
+  const { session } = useSession();
   const o = orders.find((ord) => ord.kode === kode);
+  const isBusy = busyKode === kode;
 
   const [copied, setCopied] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -58,6 +63,10 @@ function Content({ kode }: { kode: string }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  if (!loaded) {
+    return <div className="bg-paper min-h-screen px-4 py-16 text-center text-sm text-ink/60">Memuat pesanan…</div>;
+  }
 
   if (!o) {
     return (
@@ -82,7 +91,9 @@ function Content({ kode }: { kode: string }) {
   const isBuyer = !isSeller;
 
   const batasRespons = fmtDate(addMs(o.createdAt, RESPONSE_MS));
-  const batasAutoDone = fmtDate(addMs(o.createdAt, AUTO_DONE_MS));
+  const shippedAt = o.history.find((h) => h.status === "dikirim")?.at ?? o.createdAt;
+  const batasAutoDone = fmtDate(addMs(shippedAt, AUTO_DONE_MS));
+  const promoSaving = o.items.reduce((a, i) => a + (i.normalPrice && i.normalPrice > i.price ? (i.normalPrice - i.price) * i.qty : 0), 0);
   const subtotalVal = subtotal(o);
   const totalVal = total(o);
 
@@ -161,7 +172,7 @@ function Content({ kode }: { kode: string }) {
               </div>
             </div>
             <span className="shrink-0 rounded-xl bg-amber-200/70 px-3 py-1.5 text-xs font-bold text-amber-900">
-              Sisa Waktu: 41 Jam 25 Menit
+              Sisa Waktu: {sisaWaktu(addMs(o.createdAt, RESPONSE_MS))}
             </span>
           </div>
         )}
@@ -194,7 +205,7 @@ function Content({ kode }: { kode: string }) {
                 PERLINDUNGAN TRANSAKSI WANIKARYA (SLA SKN-12)
               </p>
               <p className="mt-1 text-xs text-white/90 leading-relaxed max-w-2xl">
-                Pesanan akan otomatis selesai dalam 5 hari ({batasAutoDone}) jika tidak ada konfirmasi penerimaan dari pembeli. Dana akan diteruskan ke kas UMKM {o.storeName}.
+                Pesanan akan otomatis selesai pada {batasAutoDone} (7×24 jam setelah dikirim) jika tidak ada konfirmasi penerimaan dari pembeli. Pendapatan toko {o.storeName} dicatat otomatis saat pesanan selesai.
               </p>
             </div>
           </div>
@@ -207,7 +218,7 @@ function Content({ kode }: { kode: string }) {
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-sand">
-                DAMPAK PEMBERDAYAAN DESA WISATA GABUGAN • Selesai pada {fmtDate(o.createdAt)}
+                DAMPAK PEMBERDAYAAN DESA WISATA GABUGAN • Selesai pada {fmtDate(doneAt(o) ?? o.createdAt)}
               </p>
               <p className="mt-1 text-xs text-white/90 leading-relaxed max-w-2xl">
                 Terima kasih telah mendukung kemandirian ekonomi perempuan perajin Desa Wisata Gabugan! Pendapatan bersih produk sebesar {rupiah(subtotalVal)} telah tercatat otomatis pada buku kas usaha {o.storeName}.
@@ -224,7 +235,7 @@ function Content({ kode }: { kode: string }) {
             <div>
               <h3 className="font-serif text-base font-bold">Pesanan Dibatalkan</h3>
               <p className="mt-1 text-xs text-red-800">
-                {o.cancelReason ? `Alasan: ${o.cancelReason}` : "Pesanan ini telah dibatalkan."}
+                {cancelText(o)}
               </p>
               <p className="mt-1 text-[11px] text-red-600/80">
                 Stok dikembalikan ke etalase toko dan pembayaran simulasi telah ditandai &ldquo;dikembalikan&rdquo;.
@@ -245,7 +256,7 @@ function Content({ kode }: { kode: string }) {
                 {o.status === "dikemas" && "Butuh konfirmasi atau koordinasi pesanan? Hubungi Ibu pengrajin langsung."}
                 {o.status === "dikirim" && "Barang sudah sampai dengan selamat dan sesuai? Silakan konfirmasi penerimaan."}
                 {o.status === "selesai" && "Transaksi telah tuntas. Suka dengan produk ini? Pesan kembali dengan mudah."}
-                {o.status === "dibatalkan" && "Dana simulasi telah otomatis dikembalikan ke saldo dompet Anda."}
+                {o.status === "dibatalkan" && "Pembayaran simulasi telah ditandai dikembalikan."}
               </>
             )}
             {isSeller && (
@@ -275,10 +286,11 @@ function Content({ kode }: { kode: string }) {
                 {o.status === "dikirim" && (
                   <button
                     type="button"
-                    onClick={() => konfirmasiDiterima(o.kode)}
-                    className="flex items-center gap-1.5 rounded-xl bg-forest px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-forest/90"
+                    disabled={isBusy}
+                    onClick={() => void konfirmasiDiterima(o.kode)}
+                    className="flex items-center gap-1.5 rounded-xl bg-forest px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <CheckCircle2 size={15} /> Konfirmasi Pesanan Diterima
+                    <CheckCircle2 size={15} /> {isBusy ? "Memproses…" : "Konfirmasi Pesanan Diterima"}
                   </button>
                 )}
 
@@ -318,17 +330,19 @@ function Content({ kode }: { kode: string }) {
                   <>
                     <button
                       type="button"
+                      disabled={isBusy}
                       onClick={() => setRejecting(true)}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Tolak Pesanan
                     </button>
                     <button
                       type="button"
-                      onClick={() => terima(o.kode)}
-                      className="rounded-xl bg-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors"
+                      disabled={isBusy}
+                      onClick={() => void terima(o.kode)}
+                      className="rounded-xl bg-terracotta px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Terima Pesanan (Mulai Mengemas)
+                      {isBusy ? "Memproses…" : "Terima Pesanan (Mulai Mengemas)"}
                     </button>
                   </>
                 )}
@@ -390,9 +404,6 @@ function Content({ kode }: { kode: string }) {
                 >
                   <option value="J&T Express">J&amp;T Express - Layanan Reguler Desa</option>
                   <option value="Kurir BUMDes Gabugan">Kurir BUMDes Gabugan (Antar Desa)</option>
-                  <option value="JNE">JNE Reguler</option>
-                  <option value="SiCepat">SiCepat Ekspres</option>
-                  <option value="POS Indonesia">POS Indonesia</option>
                 </select>
               </div>
 
@@ -429,6 +440,7 @@ function Content({ kode }: { kode: string }) {
               <div className="flex justify-end shrink-0">
                 <button
                   type="button"
+                  disabled={isBusy}
                   onClick={() => {
                     if (!inputResi.trim()) {
                       setResiError("Nomor resi wajib diisi.");
@@ -438,11 +450,11 @@ function Content({ kode }: { kode: string }) {
                       setResiError("Harap centang konfirmasi pengemasan terlebih dahulu.");
                       return;
                     }
-                    kirim(o.kode, selectedEkspedisi, inputResi.trim());
+                    void kirim(o.kode, selectedEkspedisi, inputResi.trim());
                   }}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-terracotta px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-xl bg-terracotta px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-terracotta-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Truck size={15} /> Konfirmasi &amp; Serahkan ke Kurir
+                  <Truck size={15} /> {isBusy ? "Memproses…" : "Konfirmasi & Serahkan ke Kurir"}
                 </button>
               </div>
             </div>
@@ -480,7 +492,7 @@ function Content({ kode }: { kode: string }) {
                   {o.status === "selesai"
                     ? "Terkirim"
                     : o.status === "dikirim"
-                    ? `Resi: ${o.resi || "JT9928172019"}`
+                    ? `Resi: ${o.resi ?? "-"}`
                     : o.status === "dikemas"
                     ? "Resi Menunggu"
                     : "Belum Dikirim"}
@@ -490,7 +502,7 @@ function Content({ kode }: { kode: string }) {
               {o.status === "dibayarkan" && (
                 <div className="space-y-3">
                   <div className="rounded-2xl bg-cream/40 p-4 text-xs text-ink/80 leading-relaxed">
-                    Nomor resi akan diterbitkan setelah penjual mengemas dan menyerahkan paket ke ekspedisi J&amp;T Express – Layanan Reguler Desa.
+                    Nomor resi akan muncul setelah penjual mengemas dan menyerahkan paket ke ekspedisi.
                   </div>
                   <div className="rounded-2xl border border-cream/80 bg-paper p-4">
                     <p className="text-[11px] font-bold text-ink/60 uppercase">Titik Asal Pengiriman</p>
@@ -507,10 +519,10 @@ function Content({ kode }: { kode: string }) {
                 <div className="space-y-3 text-xs">
                   <div className="flex items-center justify-between text-ink/80">
                     <span className="text-ink/60">Ekspedisi Terpilih</span>
-                    <span className="font-bold">{o.ekspedisi || "J&T Express – Layanan Reguler Desa"}</span>
+                    <span className="font-bold">{o.ekspedisi || "Dipilih penjual saat pengiriman"}</span>
                   </div>
                   <div className="rounded-2xl bg-amber-50/70 p-4 ring-1 ring-amber-200/60 text-amber-900 leading-relaxed">
-                    <strong>Estimasi penyerahan ke kurir:</strong> Hari ini paling lambat pukul 17.00 WIB. Nomor resi pengiriman akan muncul otomatis setelah paket diambil kurir desa.
+                    Penjual sedang menyiapkan pesanan. Nomor resi akan muncul setelah pesanan dikirim.
                   </div>
                 </div>
               )}
@@ -522,36 +534,21 @@ function Content({ kode }: { kode: string }) {
                       <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
                       <div>
                         <strong>Paket Diterima oleh {o.buyerName} (Ybs)</strong>
-                        <p className="text-[11px] text-emerald-800/80 mt-0.5">{fmtDate(o.createdAt)} • Sleman</p>
+                        <p className="text-[11px] text-emerald-800/80 mt-0.5">{fmtDate(doneAt(o) ?? o.createdAt)}</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-cream">
-                    <div className="relative">
-                      <span className="absolute -left-6 top-1 h-3 w-3 rounded-full bg-forest ring-4 ring-forest/20" />
-                      <p className="text-[10px] font-bold text-terracotta uppercase">TERBARU • Hari Ini, 08:30 WIB</p>
-                      <p className="text-xs font-bold text-ink">Paket Dibawa Kurir Menuju Alamat Tujuan</p>
-                      <p className="text-[11px] text-ink/60 mt-0.5">Kurir sedang dalam perjalanan menuju alamat. Pastikan nomor telepon aktif.</p>
+                  <div className="space-y-2 rounded-2xl bg-paper p-4 text-xs ring-1 ring-cream">
+                    <div className="flex items-center justify-between">
+                      <span className="text-ink/60">Ekspedisi</span>
+                      <span className="font-bold text-ink">{o.ekspedisi ?? "-"}</span>
                     </div>
-
-                    <div className="relative">
-                      <span className="absolute -left-6 top-1 h-2.5 w-2.5 rounded-full bg-sage" />
-                      <p className="text-[10px] text-ink/50">Kemarin, 19:40 WIB</p>
-                      <p className="text-xs font-semibold text-ink">Tiba di Drop Point DC Sleman Turi</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-ink/60">Nomor Resi</span>
+                      <span className="font-mono font-bold text-ink">{o.resi ?? "-"}</span>
                     </div>
-
-                    <div className="relative">
-                      <span className="absolute -left-6 top-1 h-2.5 w-2.5 rounded-full bg-sage" />
-                      <p className="text-[10px] text-ink/50">22 Nov 2026, 14:15 WIB</p>
-                      <p className="text-xs font-semibold text-ink">Diserahkan oleh Penjual {o.storeName}</p>
-                    </div>
-
-                    <div className="relative">
-                      <span className="absolute -left-6 top-1 h-2.5 w-2.5 rounded-full bg-cream" />
-                      <p className="text-[10px] text-ink/50">22 Nov 2026, 09:30 WIB</p>
-                      <p className="text-xs font-medium text-ink/70">Resi Pengiriman Dicetak</p>
-                    </div>
+                    <p className="pt-1 text-[11px] text-ink/55">Pelacakan paket dilakukan di situs ekspedisi.</p>
                   </div>
                 </div>
               )}
@@ -595,7 +592,7 @@ function Content({ kode }: { kode: string }) {
                       className="flex items-center gap-4 rounded-2xl bg-paper p-3.5 ring-1 ring-cream"
                     >
                       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-cream">
-                        <ImageBox src={itemImg} alt={item.name} className="h-full w-full object-cover" />
+                        <ImageBox src={item.image || itemImg} alt={item.name} className="h-full w-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-serif text-sm font-bold text-ink line-clamp-1">{item.name}</h4>
@@ -639,14 +636,14 @@ function Content({ kode }: { kode: string }) {
               </div>
 
               {/* Note for Seller */}
-              <div className="rounded-2xl bg-cream/50 p-4 ring-1 ring-cream text-xs">
-                <span className="font-bold text-[10px] uppercase tracking-wider text-terracotta block mb-1">
-                  CATATAN UNTUK PENJUAL
-                </span>
-                <p className="text-ink/75 italic">
-                  &ldquo;Mohon dilapisi besek anyaman bambu yang rapi untuk oleh-oleh keluarga. Terima kasih Bu Sumarsih.&rdquo;
-                </p>
-              </div>
+              {o.buyerNote && (
+                <div className="rounded-2xl bg-cream/50 p-4 ring-1 ring-cream text-xs">
+                  <span className="font-bold text-[10px] uppercase tracking-wider text-terracotta block mb-1">
+                    CATATAN UNTUK PENJUAL
+                  </span>
+                  <p className="text-ink/75 italic">&ldquo;{o.buyerNote}&rdquo;</p>
+                </div>
+              )}
             </div>
 
             {/* Payment Summary Card */}
@@ -657,7 +654,7 @@ function Content({ kode }: { kode: string }) {
                   <h3 className="font-serif text-base font-bold text-ink">Rincian Pembayaran</h3>
                 </div>
                 <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-[10px] font-bold text-emerald-800">
-                  Lunas – Mode Demo
+                  {o.paymentStatus === "refunded_demo" ? "Dikembalikan – Mode Demo" : "Lunas – Mode Demo"}
                 </span>
               </div>
 
@@ -665,7 +662,7 @@ function Content({ kode }: { kode: string }) {
               <div className="flex items-center justify-between rounded-2xl bg-cream/50 p-3.5 text-xs ring-1 ring-cream">
                 <div>
                   <p className="text-[10px] uppercase font-bold text-ink/50">Metode Pembayaran</p>
-                  <p className="font-semibold text-ink mt-0.5">Simulasi Kas Desa QRIS (Terverifikasi)</p>
+                  <p className="font-semibold text-ink mt-0.5">{PAYMENT_LABEL[o.paymentMethod ?? "qris"]}</p>
                 </div>
                 <CheckCircle2 size={18} className="text-emerald-600" />
               </div>
@@ -677,13 +674,15 @@ function Content({ kode }: { kode: string }) {
                   <span>{rupiah(subtotalVal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Total Ongkos Kirim (Flat Sleman)</span>
-                  <span>{rupiah(o.shipping || 15000)}</span>
+                  <span>Ongkos Kirim</span>
+                  <span>{rupiah(o.shipping)}</span>
                 </div>
-                <div className="flex justify-between text-emerald-700">
-                  <span>Diskon Promo Panen Salak</span>
-                  <span>-Rp5.000</span>
-                </div>
+                {promoSaving > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>Hemat dari promo (sudah dihitung di harga produk)</span>
+                    <span>{rupiah(promoSaving)}</span>
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between border-t border-cream/70 pt-3 text-sm">
                   <span className="font-serif font-bold text-ink">Total Pembayaran</span>
                   <span className="font-serif text-2xl font-bold text-terracotta">{rupiah(totalVal)}</span>

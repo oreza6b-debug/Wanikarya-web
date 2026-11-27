@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useSession } from "@/components/AuthProvider";
 import { rupiah } from "@/lib/format";
 import ImageBox from "./ImageBox";
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
@@ -18,10 +20,17 @@ export default function CartDrawer() {
     setIsCheckoutOpen,
   } = useCart();
 
+  const { session } = useSession();
+  const router = useRouter();
+
   if (!isCartOpen) return null;
 
   const handleCheckoutAll = () => {
     setIsCartOpen(false);
+    if (!session) {
+      router.push("/login");
+      return;
+    }
     setCheckoutItem(null); // checkout whole cart
     setIsCheckoutOpen(true);
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/components/AuthProvider";
 import ImageBox from "@/components/ImageBox";
 import {
   Save,
@@ -57,7 +57,7 @@ const narasiSections = [
 ];
 
 export default function ProfilUsahaPage() {
-  const session = getSession();
+  const { session } = useSession();
   const [modelUsaha, setModelUsaha] = useState<ModelUsaha>("keduanya");
   const [namaUsaha, setNamaUsaha] = useState("Pawon Salak Lestari");
   const [alamat, setAlamat] = useState(
