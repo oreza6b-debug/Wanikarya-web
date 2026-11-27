@@ -4,17 +4,17 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { useOrders } from "@/components/OrdersProvider";
 import { useSession } from "@/components/AuthProvider";
-import { categories, products } from "@/lib/data";
-import { doneAt, fmtDate, itemsSummary, monthKey, monthLabel, subtotal, type Order } from "@/lib/orders";
+import { categories } from "@/lib/data";
+import { doneAt, fmtDate, itemsSummary, monthKey, monthLabel, subtotal, type Order, type OrderItem } from "@/lib/orders";
 import { rupiah } from "@/lib/format";
 
 // Financial Tracker: BACA SAJA. Pendapatan = subtotal produk setelah promo dari pesanan
 // berstatus Pesanan Selesai; ongkir hanya informasi (FR-FIN-01/02). Tanpa input manual (FR-FIN-04).
 type Tab = "dashboard" | "riwayat" | "laporan";
 
-const categoryOf = (name: string) => {
-  const slug = products.find((p) => p.name === name)?.categorySlug;
-  return categories.find((c) => c.slug === slug)?.name ?? "Lainnya";
+const categoryOf = (it: OrderItem) => {
+  if (!it.categorySlug) return "Lainnya";
+  return categories.find((c) => c.slug === it.categorySlug)?.name ?? "Lainnya";
 };
 
 export default function KeuanganPage() {
@@ -64,7 +64,7 @@ export default function KeuanganPage() {
     o.items.forEach((it) => {
       const cur = perProduct.get(it.name) ?? { qty: 0, income: 0 };
       perProduct.set(it.name, { qty: cur.qty + it.qty, income: cur.income + it.price * it.qty });
-      const c = categoryOf(it.name);
+      const c = categoryOf(it);
       perCategory.set(c, (perCategory.get(c) ?? 0) + it.price * it.qty);
     })
   );

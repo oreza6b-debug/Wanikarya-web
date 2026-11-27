@@ -3,7 +3,7 @@
 export type OrderStatus = "dibayarkan" | "dikemas" | "dikirim" | "selesai" | "dibatalkan";
 export type Actor = "Buyer" | "Womanpreneur" | "Sistem";
 
-export type OrderItem = { name: string; price: number; normalPrice?: number; qty: number; image?: string }; // price = harga satuan SETELAH promo; normalPrice diisi bila ada promo (disalin saat order dibuat)
+export type OrderItem = { name: string; price: number; normalPrice?: number; qty: number; image?: string; categorySlug?: string }; // price = harga satuan SETELAH promo; normalPrice diisi bila ada promo (disalin saat order dibuat)
 export type HistoryEntry = { status: OrderStatus; at: string; by: Actor };
 export type Order = {
   kode: string; // WK-TTTTBBHH-nnnnn

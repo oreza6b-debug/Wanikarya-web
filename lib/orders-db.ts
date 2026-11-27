@@ -24,6 +24,7 @@ type Row = {
   order_items: {
     product_name_snapshot: string;
     product_image_snapshot: string | null;
+    category_slug_snapshot: string | null;
     unit_price: number;
     normal_price: number | null;
     quantity: number;
@@ -46,6 +47,7 @@ function mapRow(r: Row): Order {
       normalPrice: i.normal_price ?? undefined,
       qty: i.quantity,
       image: i.product_image_snapshot ?? undefined,
+      categorySlug: i.category_slug_snapshot ?? undefined,
     })),
     shipping: r.shipping_cost,
     status: r.status,
